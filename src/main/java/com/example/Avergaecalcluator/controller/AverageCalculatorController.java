@@ -16,7 +16,7 @@ public class AverageCalculatorController {
 
     @GetMapping("/{numberid}")
     public ResponseEntity<AverageResponse> getNumbers(@PathVariable String numberid) {
-        AverageResponse response = averageCalculatorService.calculateAverage(numberid);
+        AverageResponse response = averageCalculatorService.fetchNumbers(numberid);
         return ResponseEntity.ok(response);
     }
 }
