@@ -11,44 +11,48 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Service
 public class AverageCalculatorService {
 
-    private static final int WINDOW_SIZE = 10;
-    private static final String BASE_URL = "http://20.244.56.144/test/"; // Replace with actual test server URL
-    private final RestTemplate restTemplate;
-    private final Deque<Integer> numbersQueue = new ConcurrentLinkedDeque<>();
-    private final Set<Integer> uniqueNumbers = Collections.synchronizedSet(new HashSet<>());
-
     @Autowired
-    public AverageCalculatorService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
+    private RestTemplate restTemplate;
 
-    public AverageResponse calculateAverage(String numberid) {
-        List<Integer> newNumbers = fetchNumbersFromTestServer(numberid);
-        List<Integer> prevState = new ArrayList<>(numbersQueue);
+    private static final String BASE_URL = "http://testserver.com";
+    private static final int WINDOW_SIZE = 10;
+    private final Deque<Integer> window = new LinkedList<>();
 
-        for (int num : newNumbers) {
-            if (!uniqueNumbers.contains(num)) {
-                if (numbersQueue.size() >= WINDOW_SIZE) {
-                    int removed = numbersQueue.poll();
-                    uniqueNumbers.remove(removed);
+    public AverageResponse fetchNumbers(String numberId) {
+        List<Integer> numbers = fetchNumbersFromApi(numberId);
+
+        // Store unique numbers in the window
+        for (Integer number : numbers) {
+            if (!window.contains(number)) {
+                if (window.size() >= WINDOW_SIZE) {
+                    window.poll();
                 }
-                numbersQueue.offer(num);
-                uniqueNumbers.add(num);
+                window.add(number);
             }
         }
 
-        double average = numbersQueue.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-        return new AverageResponse(newNumbers, prevState, new ArrayList<>(numbersQueue), average);
+        double average = window.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+
+        AverageResponse numberWindow = new AverageResponse();
+        numberWindow.setNumbers(numbers);
+        numberWindow.setWindowPrevState(new ArrayList<>(window));
+        numberWindow.setWindowCurrState(new ArrayList<>(window));
+        numberWindow.setAvg(average);
+
+        return numberWindow;
     }
 
-    private List<Integer> fetchNumbersFromTestServer(String numberid) {
-        //checking
+    private List<Integer> fetchNumbersFromApi(String numberId) {
+        String url = BASE_URL + "/numbers/" + numberId;
         try {
-            Integer[] response = restTemplate.getForObject(BASE_URL + numberid, Integer[].class);
-            return response != null ? Arrays.asList(response) : Collections.emptyList();
+            Integer[] response = restTemplate.getForObject(url, Integer[].class);
+            if (response != null) {
+                return Arrays.asList(response);
+            }
         } catch (Exception e) {
-            return Collections.emptyList();
+            // Handle exceptions (e.g., timeout, errors)
         }
+        return Collections.emptyList();
     }
 }
 
