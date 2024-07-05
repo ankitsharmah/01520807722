@@ -42,6 +42,7 @@ public class AverageCalculatorService {
     }
 
     private List<Integer> fetchNumbersFromTestServer(String numberid) {
+        //checking
         try {
             Integer[] response = restTemplate.getForObject(BASE_URL + numberid, Integer[].class);
             return response != null ? Arrays.asList(response) : Collections.emptyList();
